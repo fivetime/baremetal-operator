@@ -1,0 +1,120 @@
+---
+# Fork-local image build.
+#
+# Upstream's build-images-action.yml is guarded by
+# `if: github.repository == 'metal3-io/baremetal-operator'` and delegates to a
+# reusable workflow in metal3-io/project-infra that needs Quay credentials, so
+# it never runs here. This one builds the same Dockerfile and pushes to this
+# fork's own GitHub Container Registry, which needs no secret beyond the
+# GITHUB_TOKEN the runner already has.
+#
+# No third-party actions: everything but actions/checkout is the docker CLI
+# that GitHub-hosted runners ship with. That keeps the SHA-pinning rule in
+# CLAUDE.md trivially satisfied and leaves nothing to drift.
+name: build-image-ghcr
+
+on:
+  push:
+    branches:
+    - 'build/**'
+    tags:
+    - 'fivetime-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Extra tag to publish alongside the branch/sha tags'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and push amd64 image
+    # Never run in the upstream repository: this pushes to a fork's registry.
+    if: github.repository != 'metal3-io/baremetal-operator'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+
+    - name: Work out the tags
+      id: tags
+      env:
+        REF_NAME: ${{ github.ref_name }}
+        REF_TYPE: ${{ github.ref_type }}
+        SHA: ${{ github.sha }}
+        EXTRA_TAG: ${{ inputs.tag }}
+        REPOSITORY: ${{ github.repository }}
+      run: |
+        set -o errexit -o nounset -o pipefail
+        image="ghcr.io/${REPOSITORY,,}"
+        # Slashes are legal in a branch name and illegal in an image tag.
+        slug="${REF_NAME//\//-}"
+        tags="${image}:${slug}"
+        tags="${tags},${image}:sha-${SHA::12}"
+        if [ "${REF_TYPE}" = "tag" ]; then
+          tags="${tags},${image}:latest"
+        fi
+        if [ -n "${EXTRA_TAG}" ]; then
+          tags="${tags},${image}:${EXTRA_TAG//\//-}"
+        fi
+        echo "tags=${tags}" >> "${GITHUB_OUTPUT}"
+        echo "Building ${tags}"
+
+    - name: Log in to ghcr.io
+      env:
+        TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        ACTOR: ${{ github.actor }}
+      run: |
+        set -o errexit -o nounset -o pipefail
+        printf '%s' "${TOKEN}" | docker login ghcr.io -u "${ACTOR}" --password-stdin
+
+    - name: Build and push
+      env:
+        TAGS: ${{ steps.tags.outputs.tags }}
+        SOURCE: ${{ github.server_url }}/${{ github.repository }}
+        REVISION: ${{ github.sha }}
+      run: |
+        set -o errexit -o nounset -o pipefail
+        IFS=',' read -ra tag_list <<< "${TAGS}"
+        args=()
+        for tag in "${tag_list[@]}"; do
+          args+=(--tag "${tag}")
+        done
+        # The Dockerfile pins its own Go and base images by digest and runs
+        # the build itself, so there is nothing to prepare here: the generated
+        # files it needs are committed.
+        docker buildx build \
+          --platform linux/amd64 \
+          --build-arg ARCH=amd64 \
+          --label "org.opencontainers.image.source=${SOURCE}" \
+          --label "org.opencontainers.image.revision=${REVISION}" \
+          --provenance=false \
+          --push \
+          "${args[@]}" \
+          .
+
+    - name: Report what was pushed
+      env:
+        TAGS: ${{ steps.tags.outputs.tags }}
+      run: |
+        set -o errexit -o nounset -o pipefail
+        IFS=',' read -ra tag_list <<< "${TAGS}"
+        {
+          echo "### Pushed"
+          echo
+          for tag in "${tag_list[@]}"; do
+            echo "- \`${tag}\`"
+          done
+        } >> "${GITHUB_STEP_SUMMARY}"
