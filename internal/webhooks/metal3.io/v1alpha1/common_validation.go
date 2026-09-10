@@ -23,13 +23,24 @@ import (
 // validateURL validates the given URL. The URL is assumed to come from HTTP
 // request. On success, no error is returned. Empty string also returns an error.
 func validateURL(input string) error {
+	return validateURLScheme(input, "http", "https", "ftp", "gopher", "oci")
+}
+
+// validateImageURL validates the URL of an image to be deployed. On top of
+// what validateURL accepts, it allows glance:// references to the OpenStack
+// Image service: the operator never fetches an image itself, it hands the
+// URL to Ironic, which resolves Glance references natively.
+func validateImageURL(input string) error {
+	return validateURLScheme(input, "http", "https", "ftp", "gopher", "oci", "glance")
+}
+
+func validateURLScheme(input string, allowed ...string) error {
 	urlObj, err := url.ParseRequestURI(input)
 	if err != nil {
 		return err
 	}
 
 	// Check the URL scheme
-	allowed := []string{"http", "https", "ftp", "gopher", "oci"}
 	if !slices.Contains(allowed, urlObj.Scheme) {
 		return fmt.Errorf("invalid scheme in URL, \"%s\" not allowed", urlObj.Scheme)
 	}

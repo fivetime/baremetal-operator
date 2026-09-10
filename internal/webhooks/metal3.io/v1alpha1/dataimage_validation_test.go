@@ -57,6 +57,15 @@ func TestDataImageValidateCreate(t *testing.T) {
 			wantedErr: "URL \"unix://localhost/abc/abc.php\" is invalid: invalid scheme in URL, \"unix\" not allowed",
 		},
 		{
+			// glance:// is accepted for spec.image.url only: Ironic
+			// resolves it when deploying, but a DataImage is attached as
+			// virtual media and takes a plain URL.
+			name:      "invalidURLSchemeGlance",
+			newS:      &metal3api.DataImage{TypeMeta: tm, ObjectMeta: om, Spec: metal3api.DataImageSpec{URL: "glance://01a3a2f6-8fb4-4104-9d8e-ae98494a2899"}},
+			oldS:      nil,
+			wantedErr: "URL \"glance://01a3a2f6-8fb4-4104-9d8e-ae98494a2899\" is invalid: invalid scheme in URL, \"glance\" not allowed",
+		},
+		{
 			name:      "invalidURLempty",
 			newS:      &metal3api.DataImage{TypeMeta: tm, ObjectMeta: om, Spec: metal3api.DataImageSpec{URL: ""}},
 			oldS:      nil,

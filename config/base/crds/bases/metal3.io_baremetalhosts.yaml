@@ -266,7 +266,8 @@ spec:
                   checksum:
                     description: |-
                       Checksum is the checksum for the image. Required for all formats
-                      except for "live-iso" and OCI images (oci://).
+                      except for "live-iso", OCI images (oci://) and Glance images
+                      (glance://).
                     type: string
                   checksumType:
                     description: |-
@@ -299,7 +300,10 @@ spec:
                       Only used when Image.URL has the oci:// scheme.
                     type: string
                   url:
-                    description: URL is a location of an image to deploy.
+                    description: |-
+                      URL is a location of an image to deploy. Ironic fetches it, so any
+                      scheme Ironic understands works: http://, https://, oci:// and
+                      glance://<image-uuid> for the OpenStack Image service.
                     type: string
                 required:
                 - url
@@ -1014,7 +1018,8 @@ spec:
                   checksum:
                     description: |-
                       Checksum is the checksum for the image. Required for all formats
-                      except for "live-iso" and OCI images (oci://).
+                      except for "live-iso", OCI images (oci://) and Glance images
+                      (glance://).
                     type: string
                   checksumType:
                     description: |-
@@ -1047,7 +1052,10 @@ spec:
                       Only used when Image.URL has the oci:// scheme.
                     type: string
                   url:
-                    description: URL is a location of an image to deploy.
+                    description: |-
+                      URL is a location of an image to deploy. Ironic fetches it, so any
+                      scheme Ironic understands works: http://, https://, oci:// and
+                      glance://<image-uuid> for the OpenStack Image service.
                     type: string
                 required:
                 - url
@@ -1196,7 +1204,8 @@ spec:
                       checksum:
                         description: |-
                           Checksum is the checksum for the image. Required for all formats
-                          except for "live-iso" and OCI images (oci://).
+                          except for "live-iso", OCI images (oci://) and Glance images
+                          (glance://).
                         type: string
                       checksumType:
                         description: |-
@@ -1229,7 +1238,10 @@ spec:
                           Only used when Image.URL has the oci:// scheme.
                         type: string
                       url:
-                        description: URL is a location of an image to deploy.
+                        description: |-
+                          URL is a location of an image to deploy. Ironic fetches it, so any
+                          scheme Ironic understands works: http://, https://, oci:// and
+                          glance://<image-uuid> for the OpenStack Image service.
                         type: string
                     required:
                     - url

@@ -614,7 +614,8 @@ func (p *ironicProvisioner) setDirectDeployUpdateOptsForNode(ironicNode *nodes.N
 		optValues["image_pull_secret"] = nil
 	}
 
-	// For OCI images without checksum, don't set checksum fields
+	// For images that carry their own checksum (oci://, glance://), don't
+	// set checksum fields
 	if checksum == "" && checksumType == "" {
 		optValues["image_checksum"] = nil
 		optValues["image_os_hash_algo"] = nil
@@ -910,8 +911,8 @@ func (p *ironicProvisioner) ironicHasSameImage(ironicNode *nodes.Node, image met
 			"provisionState", ironicNode.ProvisionState)
 	} else {
 		checksum, checksumType, _ := image.GetChecksum()
-		// For OCI images without checksum, only compare the URL
-		if image.IsOCI() && checksum == "" {
+		// For images that carry their own checksum, only compare the URL
+		if (image.IsOCI() || image.IsGlance()) && checksum == "" {
 			sameImage = (ironicNode.InstanceInfo["image_source"] == image.URL)
 		} else if checksumType == "" {
 			sameImage = (ironicNode.InstanceInfo["image_source"] == image.URL &&

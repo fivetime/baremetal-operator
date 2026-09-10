@@ -496,6 +496,39 @@ func TestGetImageChecksum(t *testing.T) {
 			ExpectedType: "",
 		},
 		{
+			Scenario: "Glance image without checksum",
+			Host: BareMetalHost{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "myhost",
+					Namespace: "myns",
+				},
+				Spec: BareMetalHostSpec{
+					Image: &Image{
+						URL: "glance://01a3a2f6-8fb4-4104-9d8e-ae98494a2899",
+					},
+				},
+			},
+			Expected:     true,
+			ExpectedType: "",
+		},
+		{
+			Scenario: "Glance image with checksum",
+			Host: BareMetalHost{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "myhost",
+					Namespace: "myns",
+				},
+				Spec: BareMetalHostSpec{
+					Image: &Image{
+						URL:      "glance://01a3a2f6-8fb4-4104-9d8e-ae98494a2899",
+						Checksum: "sha256hash",
+					},
+				},
+			},
+			Expected:     false,
+			ExpectedType: "",
+		},
+		{
 			Scenario: "OCI image with live-iso format and checksum",
 			Host: BareMetalHost{
 				ObjectMeta: metav1.ObjectMeta{
@@ -837,6 +870,60 @@ func TestIsOCI(t *testing.T) {
 	} {
 		t.Run(tc.Scenario, func(t *testing.T) {
 			actual := tc.Image.IsOCI()
+			assert.Equal(t, tc.Expected, actual)
+		})
+	}
+}
+
+func TestIsGlance(t *testing.T) {
+	for _, tc := range []struct {
+		Scenario string
+		Image    *Image
+		Expected bool
+	}{
+		{
+			Scenario: "nil image",
+			Image:    nil,
+			Expected: false,
+		},
+		{
+			Scenario: "Glance image",
+			Image: &Image{
+				URL: "glance://01a3a2f6-8fb4-4104-9d8e-ae98494a2899",
+			},
+			Expected: true,
+		},
+		{
+			Scenario: "Glance image, uppercase scheme",
+			Image: &Image{
+				URL: "GLANCE://01a3a2f6-8fb4-4104-9d8e-ae98494a2899",
+			},
+			Expected: true,
+		},
+		{
+			Scenario: "OCI image",
+			Image: &Image{
+				URL: "oci://example.com/image:latest",
+			},
+			Expected: false,
+		},
+		{
+			Scenario: "HTTP image",
+			Image: &Image{
+				URL: "http://example.com/image.qcow2",
+			},
+			Expected: false,
+		},
+		{
+			Scenario: "empty URL",
+			Image: &Image{
+				URL: "",
+			},
+			Expected: false,
+		},
+	} {
+		t.Run(tc.Scenario, func(t *testing.T) {
+			actual := tc.Image.IsGlance()
 			assert.Equal(t, tc.Expected, actual)
 		})
 	}

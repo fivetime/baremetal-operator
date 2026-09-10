@@ -690,11 +690,14 @@ const (
 // Image holds the details of an image either to provisioned or that
 // has been provisioned.
 type Image struct {
-	// URL is a location of an image to deploy.
+	// URL is a location of an image to deploy. Ironic fetches it, so any
+	// scheme Ironic understands works: http://, https://, oci:// and
+	// glance://<image-uuid> for the OpenStack Image service.
 	URL string `json:"url"`
 
 	// Checksum is the checksum for the image. Required for all formats
-	// except for "live-iso" and OCI images (oci://).
+	// except for "live-iso", OCI images (oci://) and Glance images
+	// (glance://).
 	Checksum string `json:"checksum,omitempty"`
 
 	// ChecksumType is the checksum algorithm for the image, e.g md5, sha256 or sha512.
@@ -725,6 +728,15 @@ func (image *Image) IsOCI() bool {
 		return false
 	}
 	return strings.HasPrefix(strings.ToLower(image.URL), "oci://")
+}
+
+// IsGlance returns true if the image URL is a reference to an image in the
+// OpenStack Image service (glance://<image-uuid>).
+func (image *Image) IsGlance() bool {
+	if image == nil || image.URL == "" {
+		return false
+	}
+	return strings.HasPrefix(strings.ToLower(image.URL), "glance://")
 }
 
 // Custom deploy is a description of a customized deploy process.
@@ -1187,6 +1199,13 @@ func (image *Image) GetChecksum() (checksum, checksumType string, err error) {
 	if image.IsOCI() {
 		if image.Checksum != "" {
 			return "", "", errors.New("spec.image.checksum must be empty for OCI images (oci:// images have embedded checksums)")
+		}
+		return "", "", nil
+	}
+
+	if image.IsGlance() {
+		if image.Checksum != "" {
+			return "", "", errors.New("spec.image.checksum must be empty for Glance images (the Image service records the checksum)")
 		}
 		return "", "", nil
 	}

@@ -593,6 +593,34 @@ func TestValidateCreate(t *testing.T) {
 			oldBMH: nil,
 		},
 		{
+			name: "validImageURLGlance",
+			newBMH: &metal3api.BareMetalHost{
+				TypeMeta:   tm,
+				ObjectMeta: om,
+				Spec: metal3api.BareMetalHostSpec{
+					Image: &metal3api.Image{
+						URL: "glance://01a3a2f6-8fb4-4104-9d8e-ae98494a2899",
+					},
+				},
+			},
+			oldBMH: nil,
+		},
+		{
+			name: "invalidImageGlanceWithChecksum",
+			newBMH: &metal3api.BareMetalHost{
+				TypeMeta:   tm,
+				ObjectMeta: om,
+				Spec: metal3api.BareMetalHostSpec{
+					Image: &metal3api.Image{
+						URL:      "glance://01a3a2f6-8fb4-4104-9d8e-ae98494a2899",
+						Checksum: "be254ebfd73e66ca91f6d91f5050aa2ee1ec4813ee65ba472f608ed340cbff09",
+					},
+				},
+			},
+			oldBMH:    nil,
+			wantedErr: "spec.image.checksum must be empty for Glance images (the Image service records the checksum)",
+		},
+		{
 			name: "validImageLiveISO",
 			newBMH: &metal3api.BareMetalHost{
 				TypeMeta:   tm,

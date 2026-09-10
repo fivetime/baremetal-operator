@@ -292,7 +292,7 @@ func validateStatusAnnotation(statusAnnotation string) error {
 func validateImage(image *metal3api.Image) []error {
 	var errs []error
 
-	err := validateURL(image.URL)
+	err := validateImageURL(image.URL)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("image URL %s is invalid: %w", image.URL, err))
 	}
